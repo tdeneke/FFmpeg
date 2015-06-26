@@ -1171,6 +1171,29 @@ typedef struct AVStream {
      * - decoding: Set by libavformat to calculate sample_aspect_ratio internally
      */
     AVRational display_aspect_ratio;
+
+    /**
+     * additional stream information. this addition can cause a minor version bump
+     * if there we need to push our modifications upstream. but as of now that is
+     * not some thing we need to spend time on.
+     */
+
+    int64_t nb_i_frame;
+
+    int64_t nb_p_frame;
+
+    int64_t nb_b_frame;
+
+    int64_t i_size;
+
+    int64_t p_size;
+
+    int64_t b_size;
+
+    int64_t size;
+
+    int64_t duration_ts_read_frames;
+
 } AVStream;
 
 AVRational av_stream_get_r_frame_rate(const AVStream *s);

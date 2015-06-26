@@ -1816,10 +1816,11 @@ static void show_frame(WriterContext *w, AVFrame *frame, AVStream *stream,
     AVBPrint pbuf;
     const char *s;
     int i;
+    int64_t frame_size;
 
     av_bprint_init(&pbuf, 1, AV_BPRINT_SIZE_UNLIMITED);
 
-    writer_print_section_header(w, SECTION_ID_FRAME);
+    /*writer_print_section_header(w, SECTION_ID_FRAME);
 
     s = av_get_media_type_string(stream->codec->codec_type);
     if (s) print_str    ("media_type", s);
@@ -1837,13 +1838,13 @@ static void show_frame(WriterContext *w, AVFrame *frame, AVStream *stream,
     if (av_frame_get_pkt_pos (frame) != -1) print_fmt    ("pkt_pos", "%"PRId64, av_frame_get_pkt_pos(frame));
     else                      print_str_opt("pkt_pos", "N/A");
     if (av_frame_get_pkt_size(frame) != -1) print_fmt    ("pkt_size", "%d", av_frame_get_pkt_size(frame));
-    else                       print_str_opt("pkt_size", "N/A");
+    else                       print_str_opt("pkt_size", "N/A"); */
 
     switch (stream->codec->codec_type) {
-        AVRational sar;
+        //AVRational sar;
 
     case AVMEDIA_TYPE_VIDEO:
-        print_int("width",                  frame->width);
+        /*print_int("width",                  frame->width);
         print_int("height",                 frame->height);
         s = av_get_pix_fmt_name(frame->format);
         if (s) print_str    ("pix_fmt", s);
@@ -1859,11 +1860,37 @@ static void show_frame(WriterContext *w, AVFrame *frame, AVStream *stream,
         print_int("display_picture_number", frame->display_picture_number);
         print_int("interlaced_frame",       frame->interlaced_frame);
         print_int("top_field_first",        frame->top_field_first);
-        print_int("repeat_pict",            frame->repeat_pict);
+        print_int("repeat_pict",            frame->repeat_pict);*/
+    	if(av_get_picture_type_char(frame->pict_type) == 'I'){
+    		frame_size = av_frame_get_pkt_size(frame);
+    		stream->nb_i_frame++;
+    		stream->i_size += frame_size;
+    		stream->size += frame_size;
+
+    	}
+
+    	if(av_get_picture_type_char(frame->pict_type) == 'P'){
+    		frame_size = av_frame_get_pkt_size(frame);
+    		stream->nb_p_frame++;
+    		stream->p_size += frame_size;
+    		stream->size += frame_size;
+
+    	}
+
+    	if(av_get_picture_type_char(frame->pict_type) == 'B'){
+    		frame_size = av_frame_get_pkt_size(frame);
+    		stream->nb_b_frame++;
+    		stream->b_size += frame_size;
+    		stream->size += frame_size;
+    	}
+
+    	//stream->duration_ts_read_frames += av_frame_get_pkt_duration(frame);
+    	stream->duration_ts_read_frames = stream->duration_ts_read_frames < frame->pkt_pts ?  frame->pkt_pts : stream->duration_ts_read_frames;
+
         break;
 
     case AVMEDIA_TYPE_AUDIO:
-        s = av_get_sample_fmt_name(frame->format);
+        /*s = av_get_sample_fmt_name(frame->format);
         if (s) print_str    ("sample_fmt", s);
         else   print_str_opt("sample_fmt", "unknown");
         print_int("nb_samples",         frame->nb_samples);
@@ -1874,10 +1901,10 @@ static void show_frame(WriterContext *w, AVFrame *frame, AVStream *stream,
                                      av_frame_get_channel_layout(frame));
             print_str    ("channel_layout", pbuf.str);
         } else
-            print_str_opt("channel_layout", "unknown");
+            print_str_opt("channel_layout", "unknown");*/
         break;
     }
-    if (do_show_frame_tags)
+    /*if (do_show_frame_tags)
         show_tags(w, av_frame_get_metadata(frame), SECTION_ID_FRAME_TAGS);
     if (frame->nb_side_data) {
         writer_print_section_header(w, SECTION_ID_FRAME_SIDE_DATA_LIST);
@@ -1899,7 +1926,7 @@ static void show_frame(WriterContext *w, AVFrame *frame, AVStream *stream,
         writer_print_section_footer(w);
     }
 
-    writer_print_section_footer(w);
+    writer_print_section_footer(w);*/
 
     av_bprint_finalize(&pbuf, NULL);
     fflush(stdout);
@@ -2158,6 +2185,15 @@ static int show_stream(WriterContext *w, AVFormatContext *fmt_ctx, int stream_id
             print_int("coded_width",  dec_ctx->coded_width);
             print_int("coded_height", dec_ctx->coded_height);
             print_int("has_b_frames", dec_ctx->has_b_frames);
+
+            print_int("nb_i_frame",              stream->nb_i_frame);
+            print_int("nb_p_frame",              stream->nb_p_frame);
+            print_int("nb_b_frame",              stream->nb_b_frame);
+            print_int("sz_i_frame",              stream->i_size);
+            print_int("sz_p_frame",              stream->p_size);
+            print_int("sz_b_frmae",              stream->b_size);
+            print_int("size",              stream->size);
+
             sar = av_guess_sample_aspect_ratio(fmt_ctx, stream, NULL);
             if (sar.den) {
                 print_q("sample_aspect_ratio", sar, ':');
@@ -2260,6 +2296,8 @@ static int show_stream(WriterContext *w, AVFormatContext *fmt_ctx, int stream_id
     print_time("start_time",  stream->start_time, &stream->time_base);
     print_ts  ("duration_ts", stream->duration);
     print_time("duration",    stream->duration, &stream->time_base);
+    print_duration_time("read_duration_time", stream->duration_ts_read_frames, &stream->time_base);
+    print_val    ("read_bit_rate", ((stream->size)*8) /(stream->duration_ts_read_frames * av_q2d(stream->time_base)), unit_bit_per_second_str);
     if (dec_ctx->bit_rate > 0) print_val    ("bit_rate", dec_ctx->bit_rate, unit_bit_per_second_str);
     else                       print_str_opt("bit_rate", "N/A");
     if (dec_ctx->rc_max_rate > 0) print_val ("max_bit_rate", dec_ctx->rc_max_rate, unit_bit_per_second_str);
