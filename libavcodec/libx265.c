@@ -24,6 +24,7 @@
 #define X265_API_IMPORTS 1
 #endif
 
+#include <stdbool.h>
 #include <x265.h>
 #include <float.h>
 

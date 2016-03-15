@@ -60,10 +60,10 @@ static int do_read_packets = 0;
 static int do_show_chapters = 0;
 static int do_show_error   = 0;
 static int do_show_format  = 0;
-static int do_show_frames  = 0;
+static int do_show_frames  = 1;
 static int do_show_packets = 0;
 static int do_show_programs = 0;
-static int do_show_streams = 0;
+static int do_show_streams = 1;
 static int do_show_stream_disposition = 0;
 static int do_show_data    = 0;
 static int do_show_program_version  = 0;
@@ -2145,19 +2145,22 @@ static int show_stream(WriterContext *w, AVFormatContext *fmt_ctx, int stream_id
         const char *profile = NULL;
         dec = dec_ctx->codec;
         if (dec) {
-            print_str("codec_name", dec->name);
+            print_str("codec_name", dec->name); 
+	    //av_log(NULL, AV_LOG_INFO, "codec_name: %s\n", dec->name);
             if (!do_bitexact) {
                 if (dec->long_name) print_str    ("codec_long_name", dec->long_name);
                 else                print_str_opt("codec_long_name", "unknown");
             }
         } else if ((cd = avcodec_descriptor_get(stream->codec->codec_id))) {
-            print_str_opt("codec_name", cd->name);
+            print_str_opt("codec_name", cd->name); 
+	    //av_log(NULL, AV_LOG_INFO, "codec_name: %s\n", cd->name);
             if (!do_bitexact) {
                 print_str_opt("codec_long_name",
                               cd->long_name ? cd->long_name : "unknown");
             }
         } else {
-            print_str_opt("codec_name", "unknown");
+            print_str_opt("codec_name", "unknown");  
+	    //av_log(NULL, AV_LOG_INFO, "codec_name: %s\n", "unknown");
             if (!do_bitexact) {
                 print_str_opt("codec_long_name", "unknown");
             }
@@ -2173,6 +2176,12 @@ static int show_stream(WriterContext *w, AVFormatContext *fmt_ctx, int stream_id
         else   print_str_opt("codec_type", "unknown");
         print_q("codec_time_base", dec_ctx->time_base, '/');
 
+        /*hack for js front end easytrans, we dont need to deal with the audio for now*/
+    	if(dec_ctx->codec_type ==  AVMEDIA_TYPE_AUDIO)
+      	    return ret;
+
+	av_log(NULL, AV_LOG_INFO, "codec_name: %s\n", avcodec_get_name(dec_ctx->codec_id));
+
         /* print AVI/FourCC tag */
         av_get_codec_tag_string(val_str, sizeof(val_str), dec_ctx->codec_tag);
         print_str("codec_tag_string",    val_str);
@@ -2181,18 +2190,44 @@ static int show_stream(WriterContext *w, AVFormatContext *fmt_ctx, int stream_id
         switch (dec_ctx->codec_type) {
         case AVMEDIA_TYPE_VIDEO:
             print_int("width",        dec_ctx->width);
+	    av_log(NULL, AV_LOG_INFO, "width: %d\n", dec_ctx->width);
             print_int("height",       dec_ctx->height);
+	    av_log(NULL, AV_LOG_INFO, "height: %d\n", dec_ctx->height);
             print_int("coded_width",  dec_ctx->coded_width);
+	    av_log(NULL, AV_LOG_INFO, "coded_width: %d\n", dec_ctx->coded_width);
             print_int("coded_height", dec_ctx->coded_height);
+	    av_log(NULL, AV_LOG_INFO, "coded_height: %d\n", dec_ctx->coded_height);
             print_int("has_b_frames", dec_ctx->has_b_frames);
+	    av_log(NULL, AV_LOG_INFO, "has_b_frames: %d\n", dec_ctx->has_b_frames);	    
 
             print_int("nb_i_frame",              stream->nb_i_frame);
+	    av_log(NULL, AV_LOG_INFO, "nb_i: %lld\n", stream->nb_i_frame);
             print_int("nb_p_frame",              stream->nb_p_frame);
-            print_int("nb_b_frame",              stream->nb_b_frame);
+       	    av_log(NULL, AV_LOG_INFO, "nb_p: %lld\n", stream->nb_p_frame);     
+	    print_int("nb_b_frame",              stream->nb_b_frame);
+	    av_log(NULL, AV_LOG_INFO, "nb_b: %lld\n", stream->nb_b_frame);
             print_int("sz_i_frame",              stream->i_size);
+	    av_log(NULL, AV_LOG_INFO, "sz_i_frame: %lld\n", stream->i_size);
             print_int("sz_p_frame",              stream->p_size);
+            av_log(NULL, AV_LOG_INFO, "sz_p_frame: %lld\n", stream->p_size);
             print_int("sz_b_frmae",              stream->b_size);
+            av_log(NULL, AV_LOG_INFO, "sz_b_frame: %lld\n", stream->b_size);
             print_int("size",              stream->size);
+	    av_log(NULL, AV_LOG_INFO, "size: %lld\n", stream->size);
+
+	    av_log(NULL, AV_LOG_INFO, "duration: %lld\n", (fmt_ctx->duration + 5000) / AV_TIME_BASE);     
+	    //av_log(NULL, AV_LOG_INFO, "duration: %4.2f\n", (stream->duration * av_q2d(stream->time_base)));
+	    av_log(NULL, AV_LOG_INFO, "read_duration_time: %4.2f\n", (stream->duration_ts_read_frames * av_q2d(stream->time_base)));
+            av_log(NULL, AV_LOG_INFO, "read_bit_rate: %4.2f\n", ((stream->size)*8) /(stream->duration_ts_read_frames * av_q2d(stream->time_base)));		
+	    
+            av_log(NULL, AV_LOG_INFO, "bit_rate: %d\n", fmt_ctx->bit_rate );
+            //av_log(NULL, AV_LOG_INFO, "bit_rate: %d\n", dec_ctx->bit_rate );
+            av_log(NULL, AV_LOG_INFO, "nb_frames: %lld\n", stream->nb_frames );
+            av_log(NULL, AV_LOG_INFO, "nb_read_frames: %lld\n", nb_streams_frames[stream_idx] );
+          
+            av_log(NULL, AV_LOG_INFO, "frame_rate: %4.2f\n",  av_q2d(stream->avg_frame_rate) );
+            //av_log(NULL, AV_LOG_INFO, "frame_rate: %4.2f\n",  stream->nb_frames/(stream->duration * av_q2d(stream->time_base)) );
+	    av_log(NULL, AV_LOG_INFO, "read_frame_rate: %4.2f\n", nb_streams_frames[stream_idx]/(stream->duration_ts_read_frames * av_q2d(stream->time_base)));	    
 
             sar = av_guess_sample_aspect_ratio(fmt_ctx, stream, NULL);
             if (sar.den) {
@@ -2296,18 +2331,25 @@ static int show_stream(WriterContext *w, AVFormatContext *fmt_ctx, int stream_id
     print_time("start_time",  stream->start_time, &stream->time_base);
     print_ts  ("duration_ts", stream->duration);
     print_time("duration",    stream->duration, &stream->time_base);
+    //av_log(NULL, AV_LOG_INFO, "duration: %4.2f\n", (stream->duration * av_q2d(stream->time_base)));
     print_duration_time("read_duration_time", stream->duration_ts_read_frames, &stream->time_base);
+    //av_log(NULL, AV_LOG_INFO, "read_duration_time: %4.2f\n", (stream->duration_ts_read_frames * av_q2d(stream->time_base)));
     print_val    ("read_bit_rate", ((stream->size)*8) /(stream->duration_ts_read_frames * av_q2d(stream->time_base)), unit_bit_per_second_str);
-    if (dec_ctx->bit_rate > 0) print_val    ("bit_rate", dec_ctx->bit_rate, unit_bit_per_second_str);
-    else                       print_str_opt("bit_rate", "N/A");
-    if (dec_ctx->rc_max_rate > 0) print_val ("max_bit_rate", dec_ctx->rc_max_rate, unit_bit_per_second_str);
-    else                       print_str_opt("max_bit_rate", "N/A");
+    //av_log(NULL, AV_LOG_INFO, "read_bit_rate: %4.2f\n", ((stream->size)*8) /(stream->duration_ts_read_frames * av_q2d(stream->time_base)));
+    if (dec_ctx->bit_rate > 0) {print_val    ("bit_rate", dec_ctx->bit_rate, unit_bit_per_second_str);
+    //				av_log(NULL, AV_LOG_INFO, "bit_rate: %d\n", dec_ctx->bit_rate );
+    }else                       print_str_opt("bit_rate", "N/A");
+    if (dec_ctx->rc_max_rate > 0) {print_val ("max_bit_rate", dec_ctx->rc_max_rate, unit_bit_per_second_str);
+    //				av_log(NULL, AV_LOG_INFO, "max_bit_rate: %d\n", dec_ctx->rc_max_rate );
+    }else                       print_str_opt("max_bit_rate", "N/A");
     if (dec_ctx->bits_per_raw_sample > 0) print_fmt("bits_per_raw_sample", "%d", dec_ctx->bits_per_raw_sample);
     else                       print_str_opt("bits_per_raw_sample", "N/A");
-    if (stream->nb_frames) print_fmt    ("nb_frames", "%"PRId64, stream->nb_frames);
-    else                   print_str_opt("nb_frames", "N/A");
-    if (nb_streams_frames[stream_idx])  print_fmt    ("nb_read_frames", "%"PRIu64, nb_streams_frames[stream_idx]);
-    else                                print_str_opt("nb_read_frames", "N/A");
+    if (stream->nb_frames) {print_fmt    ("nb_frames", "%"PRId64, stream->nb_frames);
+    //  			    av_log(NULL, AV_LOG_INFO, "nb_frames: %lld\n", stream->nb_frames );
+    }else                   print_str_opt("nb_frames", "N/A");
+    if (nb_streams_frames[stream_idx])  {print_fmt    ("nb_read_frames", "%"PRIu64, nb_streams_frames[stream_idx]);
+    //					 av_log(NULL, AV_LOG_INFO, "nb_read_frames: %lld\n", nb_streams_frames[stream_idx] );
+    }else                                print_str_opt("nb_read_frames", "N/A");
     if (nb_streams_packets[stream_idx]) print_fmt    ("nb_read_packets", "%"PRIu64, nb_streams_packets[stream_idx]);
     else                                print_str_opt("nb_read_packets", "N/A");
     if (do_show_data)
@@ -3180,6 +3222,12 @@ int main(int argc, char **argv)
     char *w_name = NULL, *w_args = NULL;
     int ret, i;
 
+    /*hack for Java Script metadata parser*/ 	
+    //const char *temp_argv[] = {argv[0],"-read_intervals","%00:20","-show_frames", "-show_streams", argv[argc-1]};
+    //int temp_argc = 6;	
+    //av_log(NULL, AV_LOG_ERROR, "video to probe: %s using %s for interval %s\n", temp_argv[temp_argc-1], temp_argv[0], temp_argv[2]);
+    	
+
     av_log_set_flags(AV_LOG_SKIP_REPEATED);
     register_exit(ffprobe_cleanup);
 
@@ -3194,6 +3242,9 @@ int main(int argc, char **argv)
 
     show_banner(argc, argv, options);
     parse_options(NULL, argc, argv, options, opt_input_file);
+
+    /*we should instead pass arguments!!*/
+    parse_read_intervals("%01:00");
 
     /* mark things to show, based on -show_entries */
     SET_DO_SHOW(CHAPTERS, chapters);
@@ -3300,5 +3351,6 @@ end:
 
     avformat_network_deinit();
 
+    av_log(NULL, AV_LOG_INFO, "EXTRACTION DONE\n");
     return ret < 0;
 }
